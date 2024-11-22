@@ -1,0 +1,49 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+*.out
+
+# Vendor directory (when using vendoring)
+vendor/
+
+# Go build artifacts
+*.log
+*.test
+*.prof
+*.mod
+*.sum
+*.exe
+*.a
+
+# Build directories
+bin/
+dist/
+build/
+
+# Test binaries and coverage results
+*.coverprofile
+*.cover.out
+*.cov
+*.test
+
+# IDE/editor specific files
+.idea/
+.vscode/
+*.swp
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Environment variables and secrets
+.env
+.env.local
+
+config/*.json
+config/*.yaml
+config/*.yml
+
+# Module files (optional, if generated)
+go.sum
