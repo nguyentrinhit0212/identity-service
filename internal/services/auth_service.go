@@ -16,7 +16,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService interface {
@@ -101,7 +100,7 @@ func (s *authService) Login(ctx *gin.Context, credentials *models.LoginCredentia
 	}
 
 	// Verify password
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(credentials.Password)); err != nil {
+	if err := s.userService.VerifyPassword(user.ID, credentials.Password); err != nil {
 		return nil, errors.New("invalid credentials")
 	}
 
@@ -380,11 +379,7 @@ func (s *authService) DisableMFA(ctx *gin.Context, password string) error {
 	}
 
 	// Verify password
-	user, err := s.userService.GetUser(ctx, claims.UserID)
-	if err != nil {
-		return err
-	}
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+	if err := s.userService.VerifyPassword(claims.UserID, password); err != nil {
 		return errors.New("invalid password")
 	}
 

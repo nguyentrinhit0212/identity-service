@@ -1,10 +1,11 @@
 package services
 
 import (
+	"errors"
+	"fmt"
 	"identity-service/internal/models"
 	"identity-service/internal/repositories"
-
-	"fmt"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -27,15 +28,18 @@ type UserService interface {
 	UpdateUserRole(userID uuid.UUID, tenantID uuid.UUID, role string) error
 	CreateOrUpdateUser(oauthUser *models.OAuthUser) (*models.User, error)
 	UpdatePassword(ctx *gin.Context, userID uuid.UUID, currentPassword, newPassword string) error
+	VerifyPassword(userID uuid.UUID, password string) error
 }
 
 type userService struct {
-	userRepo repositories.UserRepository
+	userRepo   repositories.UserRepository
+	tenantRepo repositories.TenantRepository
 }
 
-func NewUserService(userRepo repositories.UserRepository) UserService {
+func NewUserService(userRepo repositories.UserRepository, tenantRepo repositories.TenantRepository) UserService {
 	return &userService{
-		userRepo: userRepo,
+		userRepo:   userRepo,
+		tenantRepo: tenantRepo,
 	}
 }
 
@@ -111,13 +115,14 @@ func (s *userService) UpdateUserRole(userID uuid.UUID, tenantID uuid.UUID, role 
 }
 
 func (s *userService) UpdatePassword(ctx *gin.Context, userID uuid.UUID, currentPassword, newPassword string) error {
-	user, err := s.userRepo.GetUserByID(userID)
+	// Get user credentials
+	cred, err := s.userRepo.GetUserCredentials(userID)
 	if err != nil {
 		return err
 	}
 
 	// Verify current password
-	if !s.verifyPassword(user.Password, currentPassword) {
+	if !s.verifyPassword(cred.PasswordHash, currentPassword) {
 		return fmt.Errorf("current password is incorrect")
 	}
 
@@ -127,8 +132,8 @@ func (s *userService) UpdatePassword(ctx *gin.Context, userID uuid.UUID, current
 		return err
 	}
 
-	user.Password = hashedPassword
-	return s.userRepo.UpdateUser(user)
+	cred.PasswordHash = hashedPassword
+	return s.userRepo.UpdateUserCredentials(cred)
 }
 
 func (s *userService) verifyPassword(hashedPassword, password string) bool {
@@ -149,12 +154,47 @@ func (s *userService) CreateOrUpdateUser(oauthUser *models.OAuthUser) (*models.U
 	if err != nil {
 		// Create new user
 		user = &models.User{
-			Email: oauthUser.Email,
-			Name:  oauthUser.Name,
+			Email:     oauthUser.Email,
+			Name:      oauthUser.Name,
+			Status:    "active",
+			Role:      "user",
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		}
 		if err := s.userRepo.CreateUser(user); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create user: %v", err)
 		}
+		// Personal tenant is automatically created by database trigger
 	}
+
+	// Create or update OAuth profile
+	// Note: We're creating the profile struct but not persisting it since there's no repository method for it yet
+	// TODO: Add repository method to store OAuth profiles
+	_ = &models.OAuthProfile{
+		ID:        oauthUser.ID,
+		Provider:  oauthUser.Provider,
+		Email:     oauthUser.Email,
+		Name:      oauthUser.Name,
+		Picture:   oauthUser.Picture,
+		CreatedAt: time.Now(),
+	}
+
+	// Update user's last login time
+	user.LastLoginAt = time.Now()
+	if err := s.userRepo.UpdateUser(user); err != nil {
+		return nil, fmt.Errorf("failed to update user: %v", err)
+	}
+
 	return user, nil
+}
+
+func (s *userService) VerifyPassword(userID uuid.UUID, password string) error {
+	cred, err := s.userRepo.GetUserCredentials(userID)
+	if err != nil {
+		return errors.New("invalid credentials")
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(cred.PasswordHash), []byte(password)); err != nil {
+		return errors.New("invalid credentials")
+	}
+	return nil
 }

@@ -21,6 +21,8 @@ type UserRepository interface {
 	UpdateUserRole(userID, tenantID uuid.UUID, role string) error
 	GetUserTenantAccess(userID uuid.UUID) ([]models.UserTenantAccess, error)
 	GetTenantByID(id uuid.UUID) (*models.Tenant, error)
+	GetUserCredentials(userID uuid.UUID) (*models.UserCredential, error)
+	UpdateUserCredentials(cred *models.UserCredential) error
 }
 
 type userRepository struct {
@@ -144,4 +146,17 @@ func (r *userRepository) GetTenantByID(id uuid.UUID) (*models.Tenant, error) {
 	var tenant models.Tenant
 	err := r.db.Where("id = ?", id).First(&tenant).Error
 	return &tenant, err
+}
+
+func (r *userRepository) GetUserCredentials(userID uuid.UUID) (*models.UserCredential, error) {
+	var cred models.UserCredential
+	err := r.db.First(&cred, "user_id = ?", userID).Error
+	if err != nil {
+		return nil, err
+	}
+	return &cred, nil
+}
+
+func (r *userRepository) UpdateUserCredentials(cred *models.UserCredential) error {
+	return r.db.Save(cred).Error
 }

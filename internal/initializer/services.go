@@ -25,7 +25,7 @@ type Services struct {
 
 // InitServices initializes all services with their required repositories
 func InitServices(repos *Repositories) *Services {
-	userService := services.NewUserService(repos.UserRepo)
+	userService := services.NewUserService(repos.UserRepo, repos.TenantRepo)
 
 	// Initialize key manager with default settings
 	keyManager, err := jwt.NewKeyManager(defaultKeyRotationPeriod, defaultKeySize)
