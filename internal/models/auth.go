@@ -94,3 +94,24 @@ type LoginCredentials struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required,min=8"`
 }
+
+type PKCEChallenge struct {
+	ID            uuid.UUID `json:"id" gorm:"type:uuid;primary_key;"`
+	CodeChallenge string    `json:"codeChallenge" gorm:"not null"`
+	CodeVerifier  string    `json:"codeVerifier" gorm:"not null"`
+	UserID        uuid.UUID `json:"userId" gorm:"type:uuid;not null"`
+	TenantID      uuid.UUID `json:"tenantId" gorm:"type:uuid;not null"`
+	ExpiresAt     time.Time `json:"expiresAt" gorm:"not null"`
+	CreatedAt     time.Time `json:"createdAt" gorm:"not null"`
+	Used          bool      `json:"used" gorm:"not null;default:false"`
+}
+
+type TokenExchangeRequest struct {
+	Code         string `json:"code" binding:"required"`
+	CodeVerifier string `json:"codeVerifier" binding:"required"`
+}
+
+type TokenResponse struct {
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+}

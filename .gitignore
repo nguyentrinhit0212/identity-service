@@ -47,3 +47,4 @@ config/*.yml
 
 # Module files (optional, if generated)
 go.sum
+google_oauth.json

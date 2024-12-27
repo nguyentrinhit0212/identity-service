@@ -28,7 +28,7 @@ func InitHandlers(s *Services) *Handlers {
 
 	return &Handlers{
 		AuthHandler:     handlers.NewAuthHandler(s.AuthService),
-		OAuthHandler:    handlers.NewOAuthHandler(providers, s.UserService, s.AuthService),
+		OAuthHandler:    handlers.NewOAuthHandler(providers, s.UserService, s.AuthService, s.PKCEService),
 		UserHandler:     handlers.NewUserHandler(s.UserService),
 		TenantHandler:   handlers.NewTenantHandler(s.TenantService),
 		SecurityHandler: handlers.NewSecurityHandler(s.SecurityService),

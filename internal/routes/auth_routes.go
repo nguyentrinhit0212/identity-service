@@ -20,6 +20,9 @@ func AuthRoutes(router *gin.Engine, authHandler *handlers.AuthHandler, oauthHand
 			providerGroup.GET("/callback", oauthHandler.HandleCallback) // OAuth callback
 		}
 
+		// Token exchange endpoint for PKCE flow
+		authGroup.POST("/token", oauthHandler.HandleTokenExchange)
+
 		// Login
 		authGroup.POST("/login", authHandler.Login) // User login with credentials
 

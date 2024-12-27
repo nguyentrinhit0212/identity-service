@@ -19,6 +19,7 @@ type Services struct {
 	UserService     services.UserService
 	TenantService   services.TenantService
 	SecurityService services.SecurityService
+	PKCEService     services.PKCEService
 	keyManager      *jwt.KeyManager
 }
 
@@ -37,6 +38,7 @@ func InitServices(repos *Repositories) *Services {
 		UserService:     userService,
 		TenantService:   services.NewTenantService(repos.TenantRepo),
 		SecurityService: services.NewSecurityService(repos.SecurityRepo),
+		PKCEService:     services.NewPKCEService(repos.PKCERepository),
 		keyManager:      keyManager,
 	}
 }

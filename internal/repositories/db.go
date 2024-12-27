@@ -9,6 +9,9 @@ type DB interface {
 	Delete(value interface{}, conds ...interface{}) *gorm.DB
 	Where(query interface{}, args ...interface{}) *gorm.DB
 	Model(value interface{}) *gorm.DB
-	Preload(query string, args ...interface{}) *gorm.DB
+	Update(column string, value interface{}) *gorm.DB
+	Count(count *int64) *gorm.DB
+	Pluck(column string, dest interface{}) *gorm.DB
+	Find(dest interface{}, conds ...interface{}) *gorm.DB
 	Error() error
 }

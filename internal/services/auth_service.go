@@ -485,15 +485,12 @@ func (s *authService) generateToken(userID uuid.UUID, sessionID uuid.UUID, token
 		return ""
 	}
 
-	log.Printf("Generated token length: %d", len(token))
 	return token
 }
 
 func (s *authService) parseToken(tokenString string) (*Claims, error) {
 	// Remove "Bearer " prefix if present
 	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
-
-	log.Printf("Parsing token: %s", tokenString)
 
 	claims := &Claims{}
 	err := s.keyManager.VerifyToken(tokenString, claims)

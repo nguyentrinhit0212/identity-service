@@ -7,8 +7,10 @@ import (
 	"identity-service/internal/services"
 	"identity-service/pkg/utils"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // OAuthHandler handles OAuth-related HTTP requests
@@ -16,14 +18,16 @@ type OAuthHandler struct {
 	providers   map[string]services.OAuthProvider
 	userService services.UserService
 	authService services.AuthService
+	pkceService services.PKCEService
 }
 
 // NewOAuthHandler creates a new OAuth handler instance
-func NewOAuthHandler(providers map[string]services.OAuthProvider, userService services.UserService, authService services.AuthService) *OAuthHandler {
+func NewOAuthHandler(providers map[string]services.OAuthProvider, userService services.UserService, authService services.AuthService, pkceService services.PKCEService) *OAuthHandler {
 	return &OAuthHandler{
 		providers:   providers,
 		userService: userService,
 		authService: authService,
+		pkceService: pkceService,
 	}
 }
 
@@ -95,13 +99,83 @@ func (h *OAuthHandler) HandleCallback(c *gin.Context) {
 		return
 	}
 
-	// Create a session for the user with their personal tenant
-	session, err := h.authService.CreateSession(c, user, personalTenant.ID)
+	// Create a PKCE challenge for secure token exchange
+	challengeID := uuid.New()
+	challenge := &models.PKCEChallenge{
+		ID:            challengeID,
+		CodeChallenge: utils.GenerateRandomString(32), // This will be verified against the code_verifier from frontend
+		CodeVerifier:  utils.GenerateRandomString(32), // This will be sent to frontend
+		UserID:        user.ID,
+		TenantID:      personalTenant.ID,
+		ExpiresAt:     time.Now().Add(5 * time.Minute),
+		CreatedAt:     time.Now(),
+	}
+
+	if err := h.pkceService.CreateChallenge(challenge); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create challenge"})
+		return
+	}
+
+	// Redirect to frontend with the code and code_verifier
+	frontendURL := fmt.Sprintf("http://localhost:3000/%s/callback?code=%s&codeVerifier=%s",
+		personalTenant.Slug,
+		challengeID.String(),
+		challenge.CodeVerifier,
+	)
+	c.Redirect(http.StatusTemporaryRedirect, frontendURL)
+}
+
+// HandleTokenExchange handles the exchange of PKCE code for tokens
+func (h *OAuthHandler) HandleTokenExchange(c *gin.Context) {
+	var req models.TokenExchangeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	// Parse the code (which is a UUID)
+	challengeID, err := uuid.Parse(req.Code)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid code"})
+		return
+	}
+
+	// Get and verify the challenge
+	challenge, err := h.pkceService.GetChallenge(challengeID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired code"})
+		return
+	}
+
+	// Verify the code verifier
+	if challenge.CodeVerifier != req.CodeVerifier {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid code verifier"})
+		return
+	}
+
+	// Get user
+	user, err := h.userService.GetUser(c, challenge.UserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
+		return
+	}
+
+	// Create session
+	session, err := h.authService.CreateSession(c, user, challenge.TenantID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create session"})
 		return
 	}
 
-	frontendURL := fmt.Sprintf("http://localhost:3000?accessToken=%s&refreshToken=%s", session.AccessToken, session.RefreshToken)
-	c.Redirect(http.StatusTemporaryRedirect, frontendURL)
+	// Mark challenge as used
+	if err := h.pkceService.MarkChallengeAsUsed(challengeID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to mark challenge as used"})
+		return
+	}
+
+	// Return tokens
+	c.JSON(http.StatusOK, models.TokenResponse{
+		AccessToken:  session.AccessToken,
+		RefreshToken: session.RefreshToken,
+	})
 }

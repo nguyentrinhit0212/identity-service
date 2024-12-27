@@ -62,19 +62,11 @@ func NewGoogleProvider() *GoogleProvider {
 }
 
 func (g *GoogleProvider) GetAuthURL(state string) string {
-	log.Printf("GetAuthURL called with state: %s", state)
-	log.Printf("Config: ClientID=%v, RedirectURL=%v, Scopes=%v",
-		g.Config.ClientID != "",
-		g.Config.RedirectURL,
-		g.Config.Scopes,
-	)
-
 	url := g.Config.AuthCodeURL(state,
 		oauth2.AccessTypeOffline,
 		oauth2.ApprovalForce,
 		oauth2.SetAuthURLParam("include_granted_scopes", "true"),
 	)
-	log.Printf("Generated OAuth URL: %s", url)
 	return url
 }
 
