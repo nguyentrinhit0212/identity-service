@@ -14,6 +14,7 @@ type JWTToken struct {
 	IssuedAt  time.Time `gorm:"type:timestamp;not null"`
 	ExpiresAt time.Time `gorm:"type:timestamp;not null"`
 	IPAddress string    `gorm:"type:varchar(45);not null"`
+	TenantID  uuid.UUID `gorm:"type:uuid;not null;index;constraint:OnDelete:CASCADE"`
 }
 
 func (JWTToken) TableName() string {

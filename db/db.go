@@ -7,42 +7,44 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
-// DB là biến toàn cục để lưu kết nối database
-var DB *gorm.DB
+var db *gorm.DB
 
-// Connect thiết lập kết nối với cơ sở dữ liệu
+// Connect establishes connection to the database
 func Connect() error {
-	// Lấy thông tin kết nối từ biến môi trường
-	dsn := getDSN()
-	if dsn == "" {
-		return fmt.Errorf("missing database configuration")
+	// Validate required environment variables
+	required := []string{"DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME"}
+	for _, env := range required {
+		if os.Getenv(env) == "" {
+			return fmt.Errorf("missing required environment variable: %s", env)
+		}
 	}
 
-	// Kết nối với PostgreSQL
+	dsn := fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_NAME"),
+	)
+
 	var err error
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info), // Hiển thị log query (tuỳ chỉnh mức độ log nếu cần)
-	})
+	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
+		log.Printf("Failed to connect to database: %v", err)
+		return fmt.Errorf("database connection failed: %w", err)
 	}
 
-	log.Println("Database connection established successfully")
+	log.Printf("Successfully connected to database at %s:%s", os.Getenv("DB_HOST"), os.Getenv("DB_PORT"))
 	return nil
 }
 
-// getDSN lấy DSN từ biến môi trường
-func getDSN() string {
-	host := os.Getenv("POSTGRES_HOST")
-	port := os.Getenv("POSTGRES_PORT")
-	user := os.Getenv("POSTGRES_USER")
-	password := os.Getenv("POSTGRES_PASSWORD")
-	dbname := os.Getenv("POSTGRES_DB")
-	sslmode := os.Getenv("POSTGRES_SSL_MODE")
-
-	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		host, port, user, password, dbname, sslmode)
+// GetDB returns the database instance
+func GetDB() *gorm.DB {
+	if db == nil {
+		panic("Database connection not initialized. Call Connect() first")
+	}
+	return db
 }

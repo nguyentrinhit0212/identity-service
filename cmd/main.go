@@ -5,6 +5,7 @@ import (
 	"identity-service/db"
 	"identity-service/internal/initializer"
 	"identity-service/internal/routes"
+	"identity-service/pkg/utils"
 	"log"
 
 	"github.com/gin-contrib/cors"
@@ -13,37 +14,45 @@ import (
 )
 
 func main() {
+	// Load configurations
 	config.LoadOAuthConfig()
-
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, relying on system environment variables")
 	}
 
+	// Initialize database
 	if err := db.Connect(); err != nil {
 		log.Fatalf("Database connection failed: %v", err)
 	}
 
+	// Initialize all components
 	repos := initializer.InitRepositories()
+	services := initializer.InitServices(repos)
 
-    // Step 5: Initialize services
-    services := initializer.InitServices(repos)
+	// Share the key manager with utils package
+	utils.SetKeyManager(services.GetKeyManager())
 
-    // Step 6: Initialize handlers
-    handlers := initializer.InitHandlers(services)
-	
+	handlers := initializer.InitHandlers(services)
+
+	// Setup router with middleware
 	router := gin.Default()
-
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"}, // Frontend URL
+		AllowOrigins:     []string{"http://localhost:3000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		AllowCredentials: true, // Allow cookies if needed
+		AllowCredentials: true,
 	}))
 
-	routes.AuthRoutes(router, handlers.AuthHandler)
+	// Register all routes
+	routes.AuthRoutes(router, handlers.AuthHandler, handlers.OAuthHandler, services.GetKeyManager(), repos.UserRepo)
+	routes.UserRoutes(router, handlers.UserHandler, services.GetKeyManager(), repos.UserRepo)
+	routes.TenantRoutes(router, handlers.TenantHandler, services.GetKeyManager(), repos.UserRepo)
+	routes.SecurityRoutes(router, handlers.SecurityHandler, services.GetKeyManager(), repos.UserRepo)
 
-	log.Println("Server is running at http://localhost:4000")
-	if err := router.Run(":4000"); err != nil {
+	// Start server
+	port := ":4000"
+	log.Printf("Server is running at http://localhost%s", port)
+	if err := router.Run(port); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
 }

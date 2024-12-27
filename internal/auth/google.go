@@ -4,48 +4,78 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"log"
 	"net/http"
+	"os"
 
 	"identity-service/config"
 	"identity-service/internal/models"
 
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 )
 
 type GoogleProvider struct {
 	Config *oauth2.Config
 }
 
+func init() {
+	// Set up logging to write to both file and stdout
+	logFile, err := os.OpenFile("oauth.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Printf("Failed to open log file: %v", err)
+		return
+	}
+	log.SetOutput(io.MultiWriter(os.Stdout, logFile))
+}
+
 func NewGoogleProvider() *GoogleProvider {
+	log.Println("=== Initializing Google Provider ===")
 	oauthConfig := config.GoogleOAuth
 	redirectURL := ""
 	if len(oauthConfig.RedirectURIs) > 0 {
 		redirectURL = oauthConfig.RedirectURIs[0]
 	}
+	log.Printf("Redirect URL: %s", redirectURL)
+	log.Printf("Client ID present: %v", oauthConfig.ClientID != "")
+	log.Printf("Client Secret present: %v", oauthConfig.ClientSecret != "")
+
 	if oauthConfig.ClientID == "" || oauthConfig.ClientSecret == "" {
-		log.Fatalf("ClientID or ClientSecret is missing in OAuth config")
-	}
-	if oauthConfig.AuthURI == "" || oauthConfig.TokenURI == "" {
-		log.Fatalf("AuthURI or TokenURI is missing in OAuth config")
+		log.Fatal("ClientID or ClientSecret is missing in OAuth config")
 	}
 
-	return &GoogleProvider{
+	provider := &GoogleProvider{
 		Config: &oauth2.Config{
 			ClientID:     oauthConfig.ClientID,
 			ClientSecret: oauthConfig.ClientSecret,
 			RedirectURL:  redirectURL,
-			Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"},
-			Endpoint: oauth2.Endpoint{
-				AuthURL:  oauthConfig.AuthURI,
-				TokenURL: oauthConfig.TokenURI,
+			Scopes: []string{
+				"https://www.googleapis.com/auth/userinfo.email",
+				"https://www.googleapis.com/auth/userinfo.profile",
 			},
+			Endpoint: google.Endpoint,
 		},
 	}
+	log.Println("Google Provider initialized successfully")
+	return provider
 }
 
 func (g *GoogleProvider) GetAuthURL(state string) string {
-	return g.Config.AuthCodeURL(state)
+	log.Printf("GetAuthURL called with state: %s", state)
+	log.Printf("Config: ClientID=%v, RedirectURL=%v, Scopes=%v",
+		g.Config.ClientID != "",
+		g.Config.RedirectURL,
+		g.Config.Scopes,
+	)
+
+	url := g.Config.AuthCodeURL(state,
+		oauth2.AccessTypeOffline,
+		oauth2.ApprovalForce,
+		oauth2.SetAuthURLParam("include_granted_scopes", "true"),
+	)
+	log.Printf("Generated OAuth URL: %s", url)
+	return url
 }
 
 func (g *GoogleProvider) ExchangeToken(ctx context.Context, code string) (string, error) {

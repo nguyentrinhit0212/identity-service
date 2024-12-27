@@ -8,12 +8,11 @@ import (
 var JSON = jsoniter.Config{
 	EscapeHTML:                    true,
 	MarshalFloatWith6Digits:       true,
-	TagKey:                        "json", // Sử dụng tag "json" để map tên trường
-	CaseSensitive:                 false,  // Không phân biệt hoa thường
+	TagKey:                        "json",
+	CaseSensitive:                 false,
 	ObjectFieldMustBeSimpleString: false,
 }.Froze()
 
 func init() {
-	// Tự động chuyển PascalCase hoặc camelCase sang snake_case
 	extra.SetNamingStrategy(extra.LowerCaseWithUnderscores)
 }

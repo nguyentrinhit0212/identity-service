@@ -4,55 +4,50 @@ import (
 	"errors"
 	"time"
 
+	jwtmanager "identity-service/internal/auth/jwt"
+
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 )
 
-// Secret key dùng để mã hóa JWT (nên lưu trong biến môi trường)
-var jwtSecret = []byte("your_secret_key")
-
-// Claims cấu trúc payload của JWT
 type Claims struct {
-	UserID uuid.UUID `json:"user_id"`
-	Email  string `json:"email"`
+	UserID uuid.UUID `json:"userId"`
+	Email  string    `json:"email"`
 	jwt.RegisteredClaims
 }
 
-// GenerateJWT tạo JWT token
+var keyManager *jwtmanager.KeyManager
+
+// SetKeyManager sets the JWT key manager instance
+func SetKeyManager(km *jwtmanager.KeyManager) {
+	keyManager = km
+}
+
 func GenerateJWT(userID uuid.UUID, email string) (string, error) {
+	if keyManager == nil {
+		return "", errors.New("JWT manager not initialized")
+	}
+
 	claims := &Claims{
 		UserID: userID,
 		Email:  email,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)), // Token hết hạn sau 24 giờ
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			Issuer:    "identity-service",
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
+	return keyManager.SignToken(claims)
 }
 
-// ValidateJWT xác thực và giải mã JWT token
 func ValidateJWT(tokenString string) (*Claims, error) {
-	// Parse token
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		// Kiểm tra signing method
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("unexpected signing method")
-		}
-		return jwtSecret, nil
-	})
-
-	// Xác thực token
-	if err != nil {
-		return nil, err
+	if keyManager == nil {
+		return nil, errors.New("JWT manager not initialized")
 	}
 
-	// Lấy claims từ token
-	claims, ok := token.Claims.(*Claims)
-	if !ok || !token.Valid {
-		return nil, errors.New("invalid token")
+	claims := &Claims{}
+	if err := keyManager.VerifyToken(tokenString, claims); err != nil {
+		return nil, err
 	}
 
 	return claims, nil
