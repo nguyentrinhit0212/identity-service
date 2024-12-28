@@ -43,6 +43,9 @@ func main() {
 		AllowCredentials: true,
 	}))
 
+	// Register health check routes
+	routes.HealthRoutes(router)
+
 	// Register all routes
 	routes.AuthRoutes(router, handlers.AuthHandler, handlers.OAuthHandler, services.GetKeyManager(), repos.UserRepo)
 	routes.UserRoutes(router, handlers.UserHandler, services.GetKeyManager(), repos.UserRepo)

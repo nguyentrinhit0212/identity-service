@@ -1,0 +1,150 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  AWS_REGION: ap-southeast-1  # From tfstate
+  ECR_REPOSITORY: identity-service
+  EC2_HOST: 54.251.203.73    # From tfstate
+  DB_HOST: development-solopreneur.cv4msiqieqsk.ap-southeast-1.rds.amazonaws.com  # From tfstate
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
+        cache: true
+
+    - name: Install dependencies
+      run: go mod download
+
+    - name: Run tests
+      run: go test -v ./...
+
+  build-and-push:
+    name: Build and Push to ECR
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Cache Docker layers
+      uses: actions/cache@v3
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build and push
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: |
+          ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+          ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+        cache-from: type=local,src=/tmp/.buildx-cache
+        cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+    - name: Move cache
+      run: |
+        rm -rf /tmp/.buildx-cache
+        mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+  deploy:
+    name: Deploy to EC2
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ env.EC2_HOST }}
+        username: ec2-user
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          # Login to ECR
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+          
+          # Pull the latest image
+          docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+          
+          # Stop and remove the old container if it exists
+          docker stop identity-service || true
+          docker rm identity-service || true
+          
+          # Run the new container with environment variables from Parameter Store
+          docker run -d \
+            --name identity-service \
+            -p 4000:4000 \
+            -e DB_HOST="${{ env.DB_HOST }}" \
+            -e DB_PORT=5432 \
+            -e DB_USER=$(aws ssm get-parameter --name "/identity-service/db-user" --region ${{ env.AWS_REGION }} --query "Parameter.Value" --output text) \
+            -e DB_PASSWORD=$(aws ssm get-parameter --name "/identity-service/db-password" --with-decryption --region ${{ env.AWS_REGION }} --query "Parameter.Value" --output text) \
+            -e DB_NAME=$(aws ssm get-parameter --name "/identity-service/db-name" --region ${{ env.AWS_REGION }} --query "Parameter.Value" --output text) \
+            --restart unless-stopped \
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+          
+          # Clean up old images
+          docker system prune -f
+
+  notify:
+    name: Notify Deployment Status
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Notify Success
+      if: ${{ needs.deploy.result == 'success' }}
+      run: |
+        echo "Deployment successful!"
+        # Add your notification logic here (e.g., Slack, Email)
+
+    - name: Notify Failure
+      if: ${{ needs.deploy.result == 'failure' }}
+      run: |
+        echo "Deployment failed!"
+        # Add your notification logic here (e.g., Slack, Email) 
