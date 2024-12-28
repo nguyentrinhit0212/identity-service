@@ -122,7 +122,7 @@ jobs:
             # Run new container
             docker run -d \
               --name ${{ env.REPOSITORY }} \
-              -v /:/app
+              -v /:/app \
               -p 4000:4000 \
               -e DB_HOST \
               -e DB_NAME \
