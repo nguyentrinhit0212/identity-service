@@ -14,7 +14,7 @@ var db *gorm.DB
 // Connect establishes connection to the database
 func Connect() error {
 	// Validate required environment variables
-	required := []string{"DB_HOST", "DB_USER", "DB_PASSWORD", "DB_NAME"}
+	required := []string{"DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME"}
 	for _, env := range required {
 		if os.Getenv(env) == "" {
 			return fmt.Errorf("missing required environment variable: %s", env)
@@ -22,8 +22,9 @@ func Connect() error {
 	}
 
 	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s sslmode=disable",
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASSWORD"),
 		os.Getenv("DB_NAME"),

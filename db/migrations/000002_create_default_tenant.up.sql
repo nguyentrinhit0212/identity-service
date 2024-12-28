@@ -6,8 +6,6 @@ ALTER TABLE tenants ADD COLUMN type tenant_type NOT NULL DEFAULT 'team';
 ALTER TABLE tenants ADD COLUMN owner_id UUID REFERENCES users(id);
 ALTER TABLE tenants ADD COLUMN max_users INTEGER;
 ALTER TABLE tenants ADD COLUMN features JSONB DEFAULT '{}'::jsonb;
-ALTER TABLE tenants ADD COLUMN subscription_status VARCHAR(50);
-ALTER TABLE tenants ADD COLUMN subscription_expires_at TIMESTAMP WITH TIME ZONE;
 ALTER TABLE tenants ADD COLUMN domain_verified BOOLEAN DEFAULT false;
 
 -- Add constraints

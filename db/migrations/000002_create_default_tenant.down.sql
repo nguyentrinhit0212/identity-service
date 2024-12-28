@@ -11,8 +11,6 @@ ALTER TABLE tenants DROP COLUMN IF EXISTS type;
 ALTER TABLE tenants DROP COLUMN IF EXISTS owner_id;
 ALTER TABLE tenants DROP COLUMN IF EXISTS max_users;
 ALTER TABLE tenants DROP COLUMN IF EXISTS features;
-ALTER TABLE tenants DROP COLUMN IF EXISTS subscription_status;
-ALTER TABLE tenants DROP COLUMN IF EXISTS subscription_expires_at;
 ALTER TABLE tenants DROP COLUMN IF EXISTS domain_verified;
 
 -- Drop enum type
