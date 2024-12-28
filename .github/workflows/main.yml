@@ -11,6 +11,7 @@ env:
   ECR_REPOSITORY: identity-service
   EC2_HOST: 54.251.203.73    # From tfstate
   DB_HOST: development-solopreneur.cv4msiqieqsk.ap-southeast-1.rds.amazonaws.com  # From tfstate
+  GO_VERSION: '1.23'
 
 jobs:
   test:
@@ -23,14 +24,38 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.23'
+        go-version: ${{ env.GO_VERSION }}
         cache: true
+        cache-dependency-path: go.sum
 
-    - name: Install dependencies
-      run: go mod download
+    - name: Verify Go Modules
+      run: |
+        go version
+        go mod verify
+        
+    - name: Download dependencies
+      run: |
+        if [ -f go.mod ]; then
+          go mod download
+        else
+          echo "Error: go.mod not found"
+          exit 1
+        fi
 
     - name: Run tests
-      run: go test -v ./...
+      run: |
+        if [ -f go.mod ]; then
+          go test -v ./... -coverprofile=coverage.out
+        else
+          echo "Error: go.mod not found"
+          exit 1
+        fi
+
+    - name: Upload coverage
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage
+        path: coverage.out
 
   build-and-push:
     name: Build and Push to ECR
@@ -126,6 +151,13 @@ jobs:
             -e DB_NAME=$(aws ssm get-parameter --name "/identity-service/db-name" --region ${{ env.AWS_REGION }} --query "Parameter.Value" --output text) \
             --restart unless-stopped \
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+          
+          # Verify container is running
+          if ! docker ps | grep -q identity-service; then
+            echo "Container failed to start"
+            docker logs identity-service
+            exit 1
+          fi
           
           # Clean up old images
           docker system prune -f
