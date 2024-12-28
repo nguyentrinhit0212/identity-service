@@ -18,7 +18,7 @@ func main() {
 	}
 
 	// Validate required environment variables
-	required := []string{"DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME"}
+	required := []string{"DB_HOST", "DB_USER", "DB_PASSWORD", "DB_NAME"}
 	for _, env := range required {
 		if os.Getenv(env) == "" {
 			log.Fatalf("Missing required environment variable: %s", env)
@@ -27,11 +27,10 @@ func main() {
 
 	// Create database URL
 	dbURL := fmt.Sprintf(
-		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		"postgres://%s@%s:%s/%s?sslmode=disable",
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASSWORD"),
 		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
 		os.Getenv("DB_NAME"),
 	)
 

@@ -124,7 +124,6 @@ jobs:
               --name ${{ env.REPOSITORY }} \
               -p 4000:4000 \
               -e DB_HOST \
-              -e DB_PORT \
               -e DB_NAME \
               -e DB_USER \
               -e DB_PASSWORD \

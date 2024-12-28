@@ -21,7 +21,7 @@ run_migrations() {
     log "Starting database migration process..."
     
     # Check required environment variables
-    for var in DB_HOST DB_PORT DB_USER DB_PASSWORD DB_NAME; do
+    for var in DB_HOST DB_USER DB_PASSWORD DB_NAME; do
         if [ -z "$(eval echo \$$var)" ]; then
             log "ERROR: Required environment variable $var is not set"
             exit 1
@@ -33,7 +33,7 @@ run_migrations() {
     counter=0
     
     while [ $counter -lt $max_retries ]; do
-        if pg_isready -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USER}"; then
+        if pg_isready -h "${DB_HOST}" -U "${DB_USER}"; then
             log "Database connection established successfully"
             break
         fi
@@ -48,7 +48,7 @@ run_migrations() {
     fi
 
     # Construct database URL
-    dbURL="postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable"
+    dbURL="postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}/${DB_NAME}?sslmode=disable"
     
     # Check current migration status
     log "Checking migration status before applying migrations..."
