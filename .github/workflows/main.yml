@@ -104,31 +104,50 @@ jobs:
           PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
           REGISTRY: ${{ secrets.ECR_REPOSITORY_URL }}
         run: |
-          set -e
           echo "$PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
-          ssh -o StrictHostKeyChecking=no -i private_key.pem ec2-user@${{ env.EC2_HOST }} "\
-            set -e && \
-            aws ecr get-login-password --region ${{ env.AWS_REGION }} && \
-            docker login --username AWS --password-stdin $REGISTRY && \
-            docker pull $REGISTRY/$REPOSITORY:$IMAGE_TAG && \
-            docker stop $REPOSITORY || true && \
-            docker rm $REPOSITORY || true && \
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ec2-user@${{ env.EC2_HOST }} '
+            set -e
+            
+            # Login to ECR
+            aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URL }}
+            
+            # Pull new image
+            docker pull ${{ secrets.ECR_REPOSITORY_URL }}/${{ env.REPOSITORY }}:${{ github.sha }}
+            
+            # Stop and remove existing container
+            docker stop ${{ env.REPOSITORY }} || true
+            docker rm ${{ env.REPOSITORY }} || true
+            
+            # Run new container
             docker run -d \
-              --name $REPOSITORY \
+              --name ${{ env.REPOSITORY }} \
               -p 4000:4000 \
-              -e DB_HOST=$DB_HOST \
-              -e DB_NAME=$DB_NAME \
-              -e DB_USER=$DB_USER \
-              -e DB_PASSWORD=$DB_PASSWORD \
-              --health-cmd='curl -f http://localhost:4000/health || exit 1' \
+              -e DB_HOST \
+              -e DB_PORT \
+              -e DB_NAME \
+              -e DB_USER \
+              -e DB_PASSWORD \
+              --health-cmd="curl -f http://localhost:4000/health || exit 1" \
               --health-interval=30s \
               --health-timeout=10s \
               --health-retries=3 \
               --health-start-period=5s \
               --restart unless-stopped \
-              $REGISTRY/$REPOSITORY:$IMAGE_TAG && \
-            echo 'Waiting for container health check...'; && \
-            timeout 30s bash -c 'while [[ \"$(docker inspect --format='{{.State.Health.Status}}' $REPOSITORY)\" != \"healthy\" ]]; do echo -n '.' && sleep 2; done' && \
-            echo 'Container is healthy' || (echo 'Container failed health check' && docker logs $REPOSITORY && exit 1)
-          "
+              ${{ secrets.ECR_REPOSITORY_URL }}/${{ env.REPOSITORY }}:${{ github.sha }}
+            
+            # Wait for container to become healthy
+            echo "Waiting for container health check..."
+            for i in $(seq 1 30); do
+              if [ "$(docker inspect --format="{{.State.Health.Status}}" ${{ env.REPOSITORY }})" = "healthy" ]; then
+                echo "Container is healthy"
+                exit 0
+              fi
+              echo -n "."
+              sleep 1
+            done
+            
+            echo "Container failed health check"
+            docker logs ${{ env.REPOSITORY }}
+            exit 1
+          '
