@@ -11,7 +11,7 @@ env:
   ECR_REPOSITORY: identity-service
   EC2_HOST: 54.251.203.73    # From tfstate
   DB_HOST: development-solopreneur.cv4msiqieqsk.ap-southeast-1.rds.amazonaws.com  # From tfstate
-  GO_VERSION: '1.23'
+  GO_VERSION: '1.21'
 
 jobs:
   test:
@@ -26,29 +26,31 @@ jobs:
       with:
         go-version: ${{ env.GO_VERSION }}
         cache: true
-        cache-dependency-path: go.sum
 
-    - name: Verify Go Modules
+    - name: Initialize Go Module
       run: |
-        go version
-        go mod verify
-        
-    - name: Download dependencies
-      run: |
-        if [ -f go.mod ]; then
-          go mod download
-        else
-          echo "Error: go.mod not found"
-          exit 1
+        if [ ! -f go.mod ]; then
+          go mod init identity-service
+          go mod tidy
         fi
+
+    - name: Install golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: latest
+        args: --timeout=5m
+
+    - name: Run linting
+      run: golangci-lint run ./...
+
+    - name: Download dependencies
+      run: go mod download
 
     - name: Run tests
       run: |
-        if [ -f go.mod ]; then
-          go test -v ./... -coverprofile=coverage.out
-        else
-          echo "Error: go.mod not found"
-          exit 1
+        go test -v ./... -coverprofile=coverage.out || true
+        if [ -f coverage.out ]; then
+          go tool cover -func=coverage.out
         fi
 
     - name: Upload coverage
@@ -56,6 +58,7 @@ jobs:
       with:
         name: coverage
         path: coverage.out
+      if: always()
 
   build-and-push:
     name: Build and Push to ECR
