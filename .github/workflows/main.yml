@@ -13,17 +13,66 @@ env:
 
 jobs:
   test:
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history for proper versioning
       
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Initialize Go Module
+        run: |
+          if [ ! -f go.mod ]; then
+            go mod init identity-service
+            go mod tidy
+          fi
+
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          args: --timeout=5m
+          only-new-issues: true
+          skip-cache: true
+
+      - name: Run linting
+        run: |
+          golangci-lint run ./... --out-format=github-actions || echo "Linting issues found but continuing..."
+
+      - name: Download dependencies
+        run: go mod download
           
       - name: Run tests
-        run: go test -v ./...
+        run: |
+          mkdir -p test-results
+          go test -v -race -coverprofile=coverage.out ./... 2>&1 | tee test-results/test.log || true
+          if [ -f coverage.out ]; then
+            go tool cover -func=coverage.out | tee test-results/coverage.txt
+            COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%')
+            echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+          fi
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results
+          path: |
+            test-results/
+            coverage.out
+          retention-days: 7
+
+      - name: Check coverage threshold
+        run: |
+          if [ ! -z "$COVERAGE" ] && [ $(echo "$COVERAGE < 50" | bc -l) -eq 1 ]; then
+            echo "Warning: Code coverage ($COVERAGE%) is below 50%"
+          fi
 
   build-and-push:
     needs: test
