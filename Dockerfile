@@ -1,17 +1,19 @@
-FROM golang:1.21-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
 # Install required packages
 RUN apk add --no-cache gcc musl-dev
 
+# Copy go.mod and go.sum first for better caching
+COPY go.mod go.sum ./
+RUN go mod download
+
 # Copy source code
 COPY . .
 
-# Initialize module and download dependencies
-RUN go mod init identity-service && \
-    go mod tidy && \
-    go mod download
+# Tidy and download dependencies (go.mod and go.sum are already present)
+RUN go mod tidy
 
 # Build the application
 RUN CGO_ENABLED=1 GOOS=linux go build -o main ./cmd/main.go
@@ -52,5 +54,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 # Expose port
 EXPOSE 4000
 
-# Run migrations and start the service
-ENTRYPOINT ["./startup.sh"]
+# Run the startup script (using CMD)
+CMD ["./startup.sh"]
