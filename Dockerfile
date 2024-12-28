@@ -1,17 +1,18 @@
-FROM golang:1.23-alpine AS builder
+FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
 
-# Install build dependencies
+# Install required packages
 RUN apk add --no-cache gcc musl-dev
 
-# Copy go mod and sum files
-COPY go.mod go.sum ./
+# Copy go.mod first
+COPY go.mod ./
 
-# Download dependencies
-RUN go mod download
+# Download dependencies and create go.sum if it doesn't exist
+RUN go mod download && \
+    go mod tidy
 
-# Copy the source code
+# Copy the rest of the code
 COPY . .
 
 # Build the application
@@ -21,7 +22,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build -o main ./cmd/main.go
 RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
 # Final stage
-FROM alpine:3.19
+FROM alpine:latest
 
 WORKDIR /app
 
@@ -50,8 +51,8 @@ USER appuser
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:4000/health || exit 1
 
-# Expose the port the service runs on
+# Expose port
 EXPOSE 4000
 
-# Command to run migrations and start the service
+# Run migrations and start the service
 ENTRYPOINT ["./startup.sh"]
