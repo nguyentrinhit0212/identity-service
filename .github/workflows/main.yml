@@ -104,6 +104,7 @@ jobs:
           echo "$PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
           ssh -o StrictHostKeyChecking=no -i private_key.pem ec2-user@${{ env.EC2_HOST }} "
+            echo $REGISTRY/$REPOSITORY:$IMAGE_TAG
             aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin $REGISTRY;
             docker pull $REGISTRY/$REPOSITORY:$IMAGE_TAG;
             docker stop $REPOSITORY || true;
