@@ -9,7 +9,7 @@ on:
 env:
   REPOSITORY: identity-service
   AWS_REGION: ap-southeast-1
-  EC2_HOST: 54.251.203.73
+  EC2_HOST: 13.212.20.216
   GO_VERSION: 1.21
 
 jobs:
