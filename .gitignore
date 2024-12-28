@@ -12,8 +12,6 @@ vendor/
 *.log
 *.test
 *.prof
-*.mod
-*.sum
 *.exe
 *.a
 
@@ -46,5 +44,4 @@ config/*.yaml
 config/*.yml
 
 # Module files (optional, if generated)
-go.sum
 google_oauth.json
