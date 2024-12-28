@@ -5,15 +5,13 @@ WORKDIR /app
 # Install required packages
 RUN apk add --no-cache gcc musl-dev
 
-# Copy go.mod first
-COPY go.mod go.sum ./
-
-# Download dependencies and create go.sum if it doesn't exist
-RUN go mod download && \
-    go mod tidy
-
-# Copy the rest of the code
+# Copy source code
 COPY . .
+
+# Initialize module and download dependencies
+RUN go mod init identity-service && \
+    go mod tidy && \
+    go mod download
 
 # Build the application
 RUN CGO_ENABLED=1 GOOS=linux go build -o main ./cmd/main.go
