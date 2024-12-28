@@ -65,7 +65,7 @@ func (s *domainService) InitiateDomainVerification(tenantID uuid.UUID, domain st
 	}
 
 	// Store verification details in tenant settings
-	_, err = s.tenantService.UpdateTenant(nil, tenantID, &models.TenantUpdate{
+	_, err = s.tenantService.UpdateTenant(tenantID, &models.TenantUpdate{
 		Domain: &domain,
 	})
 	if err != nil {
@@ -76,7 +76,7 @@ func (s *domainService) InitiateDomainVerification(tenantID uuid.UUID, domain st
 }
 
 func (s *domainService) CheckVerificationStatus(tenantID uuid.UUID, domain string) (bool, error) {
-	tenant, err := s.tenantService.GetTenant(nil, tenantID)
+	tenant, err := s.tenantService.GetTenant(tenantID)
 	if err != nil {
 		return false, err
 	}
@@ -89,7 +89,7 @@ func (s *domainService) CheckVerificationStatus(tenantID uuid.UUID, domain strin
 }
 
 func (s *domainService) VerifyDomain(tenantID uuid.UUID, domain string, method string) error {
-	tenant, err := s.tenantService.GetTenant(nil, tenantID)
+	tenant, err := s.tenantService.GetTenant(tenantID)
 	if err != nil {
 		return err
 	}
@@ -113,14 +113,14 @@ func (s *domainService) VerifyDomain(tenantID uuid.UUID, domain string, method s
 	}
 
 	// Update tenant with verified domain
-	_, err = s.tenantService.UpdateTenant(nil, tenantID, &models.TenantUpdate{
+	_, err = s.tenantService.UpdateTenant(tenantID, &models.TenantUpdate{
 		DomainVerified: &verified,
 	})
 	return err
 }
 
 func (s *domainService) GetVerifiedDomains(tenantID uuid.UUID) ([]string, error) {
-	tenant, err := s.tenantService.GetTenant(nil, tenantID)
+	tenant, err := s.tenantService.GetTenant(tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (s *domainService) GetVerifiedDomains(tenantID uuid.UUID) ([]string, error)
 }
 
 func (s *domainService) RemoveDomain(tenantID uuid.UUID, domain string) error {
-	tenant, err := s.tenantService.GetTenant(nil, tenantID)
+	tenant, err := s.tenantService.GetTenant(tenantID)
 	if err != nil {
 		return err
 	}
@@ -144,7 +144,7 @@ func (s *domainService) RemoveDomain(tenantID uuid.UUID, domain string) error {
 
 	emptyDomain := ""
 	verified := false
-	_, err = s.tenantService.UpdateTenant(nil, tenantID, &models.TenantUpdate{
+	_, err = s.tenantService.UpdateTenant(tenantID, &models.TenantUpdate{
 		Domain:         &emptyDomain,
 		DomainVerified: &verified,
 	})
@@ -188,7 +188,7 @@ func (s *domainService) verifyDNSRecord(domain string) bool {
 	return false
 }
 
-func (s *domainService) verifyFileToken(domain string) bool {
+func (s *domainService) verifyFileToken(_ string) bool {
 	// Implement file-based verification logic
 	// This is a placeholder implementation
 	return false

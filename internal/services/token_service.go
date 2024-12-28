@@ -14,7 +14,7 @@ import (
 )
 
 type TokenService interface {
-	GenerateToken(userID string, tenantId string) (string, error)
+	GenerateToken(userID string, tenantID string) (string, error)
 	ValidateToken(token string) (*models.JWTToken, error)
 	RevokeToken(tokenID string) error
 }
@@ -31,7 +31,7 @@ func NewTokenService(tokenRepo repositories.JwtTokenRepository, keyManager *jwtm
 	}
 }
 
-func (s *tokenService) GenerateToken(userID string, tenantId string) (string, error) {
+func (s *tokenService) GenerateToken(userID string, tenantID string) (string, error) {
 	// Parse user ID
 	uid, err := uuid.Parse(userID)
 	if err != nil {
@@ -39,7 +39,7 @@ func (s *tokenService) GenerateToken(userID string, tenantId string) (string, er
 	}
 
 	// Parse tenant ID
-	tid, err := uuid.Parse(tenantId)
+	tid, err := uuid.Parse(tenantID)
 	if err != nil {
 		return "", err
 	}
@@ -50,7 +50,7 @@ func (s *tokenService) GenerateToken(userID string, tenantId string) (string, er
 		Subject:   userID,
 		IssuedAt:  jwt.NewNumericDate(now),
 		ExpiresAt: jwt.NewNumericDate(now.Add(24 * time.Hour)),
-		Audience:  jwt.ClaimStrings{tenantId},
+		Audience:  jwt.ClaimStrings{tenantID},
 	}
 
 	// Create token with RS256 algorithm
@@ -85,18 +85,22 @@ func (s *tokenService) GenerateToken(userID string, tenantId string) (string, er
 }
 
 func (s *tokenService) ValidateToken(tokenString string) (*models.JWTToken, error) {
-	// Parse token without validation to get the key ID
-	parser := jwt.Parser{
-		ValidMethods: []string{jwt.SigningMethodRS256.Name},
-	}
-	token, _ := parser.Parse(tokenString, nil)
-	if token == nil {
+	// First parse without validation to get the key ID
+	var (
+		err         error
+		parsedToken *jwt.Token
+		ok          bool
+		keyID       string
+	)
+
+	// Initial parse to get the key ID
+	parsedToken, err = jwt.Parse(tokenString, nil)
+	if err != nil {
 		return nil, jwt.ErrSignatureInvalid
 	}
 
 	// Get key ID from token header
-	keyID, ok := token.Header["kid"].(string)
-	if !ok {
+	if keyID, ok = parsedToken.Header["kid"].(string); !ok {
 		return nil, jwt.ErrSignatureInvalid
 	}
 
@@ -107,15 +111,16 @@ func (s *tokenService) ValidateToken(tokenString string) (*models.JWTToken, erro
 	}
 
 	// Parse and validate token
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+	validatedToken, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		var isRSA bool
+		if _, isRSA = token.Method.(*jwt.SigningMethodRSA); !isRSA {
 			return nil, jwt.ErrSignatureInvalid
 		}
 		return keyPair.PublicKey, nil
 	})
 
-	if err != nil || !token.Valid {
-		return nil, err
+	if err != nil || !validatedToken.Valid {
+		return nil, jwt.ErrSignatureInvalid
 	}
 
 	// Hash token for lookup

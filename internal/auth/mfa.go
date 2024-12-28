@@ -9,7 +9,10 @@ import (
 func GenerateMFASecret() string {
 	// Generate 20 random bytes
 	bytes := make([]byte, 20)
-	rand.Read(bytes)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return ""
+	}
 
 	// Encode to base32
 	return base32.StdEncoding.EncodeToString(bytes)
@@ -21,7 +24,7 @@ func GenerateMFAQRCode(secret string) string {
 	return fmt.Sprintf("otpauth://totp/YourService:%s?secret=%s&issuer=YourService", "user@example.com", secret)
 }
 
-func VerifyTOTP(secret string, token string) bool {
+func VerifyTOTP(_ string, _ string) bool {
 	// TODO: Implement TOTP verification
 	return true
 }

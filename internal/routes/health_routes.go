@@ -7,7 +7,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-migrate/migrate/v4"
+
+	// postgres driver for database migrations
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	// file source driver for migrations
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 

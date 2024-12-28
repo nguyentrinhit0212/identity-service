@@ -22,14 +22,14 @@ type AuthService interface {
 	Login(ctx *gin.Context, credentials *models.LoginCredentials) (*models.Session, error)
 	Logout(ctx *gin.Context) error
 	RefreshToken(ctx *gin.Context, refreshToken string) (*models.Session, error)
-	ValidateToken(ctx *gin.Context, token string) (*models.Session, error)
+	ValidateToken(token string) (*models.Session, error)
 	HandleOAuthCallback(ctx *gin.Context, provider string, code string) (*models.OAuthUser, error)
 	GetOAuthProvider(provider string) (auth.OAuthProviderInterface, error)
 	SwitchTenant(ctx *gin.Context, tenantID uuid.UUID) (*models.Session, error)
 	GetSession(ctx *gin.Context) (*models.Session, error)
-	SendPasswordResetEmail(ctx *gin.Context, email string) error
-	ResetPassword(ctx *gin.Context, token string, newPassword string) error
-	VerifyEmail(ctx *gin.Context, token string) error
+	SendPasswordResetEmail(email string) error
+	ResetPassword(token string, newPassword string) error
+	VerifyEmail(token string) error
 	ListSessions(ctx *gin.Context) ([]*models.Session, error)
 	RevokeSession(ctx *gin.Context, sessionID uuid.UUID) error
 	RevokeAllSessions(ctx *gin.Context) error
@@ -94,7 +94,7 @@ func (s *authService) HandleOAuthCallback(ctx *gin.Context, provider string, cod
 
 func (s *authService) Login(ctx *gin.Context, credentials *models.LoginCredentials) (*models.Session, error) {
 	// Get user by email
-	user, err := s.userService.GetUserByEmail(ctx, credentials.Email)
+	user, err := s.userService.GetUserByEmail(credentials.Email)
 	if err != nil {
 		return nil, errors.New("invalid credentials")
 	}
@@ -105,7 +105,7 @@ func (s *authService) Login(ctx *gin.Context, credentials *models.LoginCredentia
 	}
 
 	// Get user's tenants
-	tenants, err := s.userService.GetUserTenants(ctx, user.ID)
+	tenants, err := s.userService.GetUserTenants(user.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user tenants: %v", err)
 	}
@@ -162,7 +162,7 @@ func (s *authService) RefreshToken(ctx *gin.Context, refreshToken string) (*mode
 	}
 
 	// Get user to verify they still exist
-	user, err := s.userService.GetUser(ctx, session.UserID)
+	user, err := s.userService.GetUser(session.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("user not found: %v", err)
 	}
@@ -171,7 +171,7 @@ func (s *authService) RefreshToken(ctx *gin.Context, refreshToken string) (*mode
 	return s.CreateSession(ctx, user, session.TenantID)
 }
 
-func (s *authService) ValidateToken(ctx *gin.Context, token string) (*models.Session, error) {
+func (s *authService) ValidateToken(token string) (*models.Session, error) {
 	// Parse token
 	claims, err := s.parseToken(token)
 	if err != nil {
@@ -233,21 +233,21 @@ func (s *authService) GetSession(ctx *gin.Context) (*models.Session, error) {
 		return nil, errors.New("no token provided")
 	}
 
-	return s.ValidateToken(ctx, token)
+	return s.ValidateToken(token)
 }
 
-func (s *authService) SendPasswordResetEmail(ctx *gin.Context, email string) error {
+func (s *authService) SendPasswordResetEmail(email string) error {
 	// Get user by email
-	_, err := s.userService.GetUserByEmail(ctx, email)
+	_, err := s.userService.GetUserByEmail(email)
 	if err != nil {
-		return nil // Don't reveal if email exists
+		return err
 	}
 
 	// TODO: Implement password reset functionality
 	return nil
 }
 
-func (s *authService) ResetPassword(ctx *gin.Context, token string, newPassword string) error {
+func (s *authService) ResetPassword(_ string, _ string) error {
 	// TODO: Verify token and get associated user
 	// TODO: Hash new password
 	// TODO: Update user password
@@ -255,7 +255,7 @@ func (s *authService) ResetPassword(ctx *gin.Context, token string, newPassword 
 	return nil
 }
 
-func (s *authService) VerifyEmail(ctx *gin.Context, token string) error {
+func (s *authService) VerifyEmail(_ string) error {
 	// TODO: Verify token and get associated email verification
 	// TODO: Mark email as verified
 	// TODO: Update user's email verified status
@@ -315,7 +315,7 @@ func (s *authService) GetSecuritySettings(ctx *gin.Context) (*models.SecuritySet
 		return nil, err
 	}
 
-	user, err := s.userService.GetUser(ctx, claims.UserID)
+	user, err := s.userService.GetUser(claims.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -341,7 +341,7 @@ func (s *authService) UpdateSecuritySettings(ctx *gin.Context, settings models.S
 		Settings: (*json.RawMessage)(&settingsBytes),
 	}
 
-	return s.userService.UpdateUser(ctx, claims.UserID, update)
+	return s.userService.UpdateUser(claims.UserID, update)
 }
 
 func (s *authService) EnableMFA(ctx *gin.Context) (string, string, error) {
@@ -362,10 +362,13 @@ func (s *authService) EnableMFA(ctx *gin.Context) (string, string, error) {
 		"mfa_enabled": true,
 		"mfa_secret":  secret,
 	}
-	settingsBytes, _ := json.Marshal(settings)
+	settingsBytes, err := json.Marshal(settings)
+	if err != nil {
+		return "", "", err
+	}
 	*update.Settings = json.RawMessage(settingsBytes)
 
-	if err := s.userService.UpdateUser(ctx, claims.UserID, update); err != nil {
+	if err := s.userService.UpdateUser(claims.UserID, update); err != nil {
 		return "", "", err
 	}
 
@@ -391,10 +394,13 @@ func (s *authService) DisableMFA(ctx *gin.Context, password string) error {
 		"mfa_enabled": false,
 		"mfa_secret":  nil,
 	}
-	settingsBytes, _ := json.Marshal(settings)
+	settingsBytes, err := json.Marshal(settings)
+	if err != nil {
+		return err
+	}
 	*update.Settings = json.RawMessage(settingsBytes)
 
-	return s.userService.UpdateUser(ctx, claims.UserID, update)
+	return s.userService.UpdateUser(claims.UserID, update)
 }
 
 func (s *authService) VerifyMFA(ctx *gin.Context, token string) error {
@@ -403,7 +409,7 @@ func (s *authService) VerifyMFA(ctx *gin.Context, token string) error {
 		return err
 	}
 
-	user, err := s.userService.GetUser(ctx, claims.UserID)
+	user, err := s.userService.GetUser(claims.UserID)
 	if err != nil {
 		return err
 	}

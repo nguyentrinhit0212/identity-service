@@ -75,11 +75,11 @@ func (s *subscriptionService) UpdateSubscription(tenantID uuid.UUID, plan string
 	update := &models.TenantUpdate{
 		Features: &rawJSON,
 	}
-	_, err = s.tenantService.UpdateTenant(nil, tenant.ID, update)
+	_, err = s.tenantService.UpdateTenant(tenant.ID, update)
 	return err
 }
 
-func (s *subscriptionService) HandleSubscriptionWebhook(event interface{}) error {
+func (s *subscriptionService) HandleSubscriptionWebhook(_ interface{}) error {
 	// TODO: Implement webhook handling for your payment provider
 	// This would handle events like:
 	// - subscription.created

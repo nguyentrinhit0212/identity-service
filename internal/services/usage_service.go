@@ -63,7 +63,10 @@ func (s *usageService) TrackAPICall(tenantID uuid.UUID) {
 	update := &models.TenantUpdate{
 		Settings: (*json.RawMessage)(&rawJSON),
 	}
-	_, _ = s.tenantService.UpdateTenant(nil, tenantID, update)
+	_, err = s.tenantService.UpdateTenant(tenantID, update)
+	if err != nil {
+		return
+	}
 }
 
 func (s *usageService) GetStorageUsage(tenantID uuid.UUID) (int64, error) {

@@ -1,0 +1,116 @@
+# Revive configuration file
+ignoreGeneratedHeader = false
+severity = "warning"
+confidence = 0.8
+errorCode = 1
+warningCode = 0
+
+# Rules configuration
+[rule.exported]
+    disabled = true
+
+[rule.unexported-return]
+    disabled = true
+
+[rule.package-comments]
+    disabled = true
+
+[rule.public-package-vars]
+    disabled = true
+
+[rule.dot-imports]
+    disabled = true
+
+[rule.comment-spacings]
+    disabled = true
+
+[rule.exported-methods]
+    disabled = true
+
+[rule.blank-imports]
+    severity = "warning"
+
+[rule.context-as-argument]
+    severity = "warning"
+
+[rule.context-keys-type]
+    severity = "warning"
+
+[rule.error-return]
+    severity = "warning"
+
+[rule.error-strings]
+    severity = "warning"
+
+[rule.error-naming]
+    severity = "warning"
+
+[rule.if-return]
+    severity = "warning"
+
+[rule.increment-decrement]
+    severity = "warning"
+
+[rule.var-naming]
+    severity = "warning"
+
+[rule.var-declaration]
+    severity = "warning"
+
+[rule.range]
+    severity = "warning"
+
+[rule.receiver-naming]
+    severity = "warning"
+
+[rule.time-naming]
+    severity = "warning"
+
+[rule.indent-error-flow]
+    severity = "warning"
+
+[rule.errorf]
+    severity = "warning"
+
+[rule.empty-block]
+    severity = "warning"
+
+[rule.superfluous-else]
+    severity = "warning"
+
+[rule.unused-parameter]
+    severity = "warning"
+
+[rule.unreachable-code]
+    severity = "warning"
+
+[rule.redefines-builtin-id]
+    severity = "warning"
+
+[rule.atomic]
+    severity = "warning"
+
+[rule.bool-literal-in-expr]
+    severity = "warning"
+
+[rule.constant-logical-expr]
+    severity = "warning"
+
+[rule.modifies-parameter]
+    severity = "warning"
+
+[rule.modifies-value-receiver]
+    severity = "warning"
+
+[rule.range-val-in-closure]
+    severity = "warning"
+
+[rule.waitgroup-by-value]
+    severity = "warning"
+
+[rule.duplicated-imports]
+    severity = "warning"
+
+[arguments]
+    # Exclude test files
+    excludePaths = ["_test\\.go$"] 

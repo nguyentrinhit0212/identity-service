@@ -24,12 +24,20 @@ func NewTenantHandler(tenantService services.TenantService) *TenantHandler {
 
 // ListTenants returns a paginated list of tenants
 func (h *TenantHandler) ListTenants(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page"})
+		return
+	}
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit"})
+		return
+	}
 	search := c.Query("search")
 	filter := c.QueryMap("filter")
 
-	tenants, total, err := h.tenantService.ListTenants(c, page, limit, search, filter)
+	tenants, total, err := h.tenantService.ListTenants(page, limit, search, filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -51,7 +59,7 @@ func (h *TenantHandler) CreateTenant(c *gin.Context) {
 		return
 	}
 
-	createdTenant, err := h.tenantService.CreateTenant(c, &tenant)
+	createdTenant, err := h.tenantService.CreateTenant(&tenant)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -68,7 +76,7 @@ func (h *TenantHandler) GetTenant(c *gin.Context) {
 		return
 	}
 
-	tenant, err := h.tenantService.GetTenant(c, tenantID)
+	tenant, err := h.tenantService.GetTenant(tenantID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -91,7 +99,7 @@ func (h *TenantHandler) UpdateTenant(c *gin.Context) {
 		return
 	}
 
-	updatedTenant, err := h.tenantService.UpdateTenant(c, tenantID, &updates)
+	updatedTenant, err := h.tenantService.UpdateTenant(tenantID, &updates)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -108,7 +116,7 @@ func (h *TenantHandler) DeleteTenant(c *gin.Context) {
 		return
 	}
 
-	if err := h.tenantService.DeleteTenant(c, tenantID); err != nil {
+	if err := h.tenantService.DeleteTenant(tenantID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -124,7 +132,7 @@ func (h *TenantHandler) GetTenantSettings(c *gin.Context) {
 		return
 	}
 
-	settings, err := h.tenantService.GetTenantSettings(c, tenantID)
+	settings, err := h.tenantService.GetTenantSettings(tenantID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -147,7 +155,7 @@ func (h *TenantHandler) UpdateTenantSettings(c *gin.Context) {
 		return
 	}
 
-	updatedSettings, err := h.tenantService.UpdateTenantSettings(c, tenantID, &settings)
+	updatedSettings, err := h.tenantService.UpdateTenantSettings(tenantID, &settings)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -164,12 +172,20 @@ func (h *TenantHandler) GetTenantMembers(c *gin.Context) {
 		return
 	}
 
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page"})
+		return
+	}
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit"})
+		return
+	}
 	search := c.Query("search")
 	filter := c.QueryMap("filter")
 
-	members, total, err := h.tenantService.GetTenantMembers(c, tenantID, page, limit, search, filter)
+	members, total, err := h.tenantService.GetTenantMembers(tenantID, page, limit, search, filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -196,7 +212,7 @@ func (h *TenantHandler) GetTenantFeatures(c *gin.Context) {
 		return
 	}
 
-	features, err := h.tenantService.GetTenantFeatures(c, tenantID)
+	features, err := h.tenantService.GetTenantFeatures(tenantID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -219,7 +235,7 @@ func (h *TenantHandler) UpdateTenantFeatures(c *gin.Context) {
 		return
 	}
 
-	updatedFeatures, err := h.tenantService.UpdateTenantFeatures(c, tenantID, &features)
+	updatedFeatures, err := h.tenantService.UpdateTenantFeatures(tenantID, &features)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -237,7 +253,7 @@ func (h *TenantHandler) SwitchTenant(c *gin.Context) {
 		return
 	}
 
-	if err := h.tenantService.SwitchTenant(c, userID, tenantID); err != nil {
+	if err := h.tenantService.SwitchTenant(userID, tenantID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -259,7 +275,7 @@ func (h *TenantHandler) UpgradeTenant(c *gin.Context) {
 		return
 	}
 
-	if err := h.tenantService.UpgradeTenant(c, tenantID, &upgrade); err != nil {
+	if err := h.tenantService.UpgradeTenant(tenantID, &upgrade); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -281,7 +297,7 @@ func (h *TenantHandler) CreateTenantInvite(c *gin.Context) {
 		return
 	}
 
-	createdInvite, err := h.tenantService.CreateTenantInvite(c, tenantID, &invite)
+	createdInvite, err := h.tenantService.CreateTenantInvite(tenantID, &invite)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -304,7 +320,7 @@ func (h *TenantHandler) DeleteTenantInvite(c *gin.Context) {
 		return
 	}
 
-	if err := h.tenantService.DeleteTenantInvite(c, tenantID, inviteID); err != nil {
+	if err := h.tenantService.DeleteTenantInvite(tenantID, inviteID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

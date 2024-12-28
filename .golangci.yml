@@ -1,6 +1,5 @@
 linters:
-  disable:
-    - golint  # deprecated
+  disable-all: true
   enable:
     - gofmt
     - govet
@@ -8,27 +7,14 @@ linters:
     - staticcheck
     - gosimple
     - ineffassign
-    - revive    # replacement for golint
-    - gocyclo   # check function complexity
-    - misspell  # check spelling
-    - bodyclose # ensure HTTP response bodies are closed
-    - nilerr    # check nil error handling
-
-run:
-  timeout: 5m
-  tests: true
-  skip-dirs:
-    - vendor/
-    - tmp/
-    - .git/
-  skip-files:
-    - ".*_test\\.go$"
+    - revive
+    - gocyclo
+    - misspell
+    - bodyclose
+    - nilerr
 
 linters-settings:
   errcheck:
-    check-type-assertions: true
-    check-blank: true
-    ignore: fmt:.*,io/ioutil:^Read.*
     exclude-functions:
       - (*crypto/rand.Reader).Read
       - io.Copy
@@ -36,23 +22,18 @@ linters-settings:
       - rand.Read
 
 issues:
+  exclude-dirs:
+    - vendor/
+    - tmp/
+    - .git/
+  exclude-files:
+    - ".*_test\\.go$"
   exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - revive
     - path: internal/auth/jwt/
       text: "Error return value of .((rand.Read)|(io.ReadFull)). is not checked"
       linters:
         - errcheck
-  
-  exclude-use-default: false
-  max-issues-per-linter: 0
-  max-same-issues: 0
-  new: false
 
 output:
-  format: colored-line-number
-  print-issued-lines: true
-  print-linter-name: true
+  formats: colored-line-number
   sort-results: true 

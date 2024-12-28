@@ -79,7 +79,7 @@ func (h *OAuthHandler) HandleCallback(c *gin.Context) {
 	}
 
 	// Get user's tenants
-	tenants, err := h.userService.GetUserTenants(c, user.ID)
+	tenants, err := h.userService.GetUserTenants(user.ID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user tenants"})
 		return
@@ -154,7 +154,7 @@ func (h *OAuthHandler) HandleTokenExchange(c *gin.Context) {
 	}
 
 	// Get user
-	user, err := h.userService.GetUser(c, challenge.UserID)
+	user, err := h.userService.GetUser(challenge.UserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
 		return

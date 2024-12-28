@@ -88,17 +88,17 @@ func (s *tenantTemplateService) ListTemplates() ([]*TenantTemplate, error) {
 	}, nil
 }
 
-func (s *tenantTemplateService) CreateTemplate(template *TenantTemplate) error {
+func (s *tenantTemplateService) CreateTemplate(_ *TenantTemplate) error {
 	// TODO: Implement template storage
 	return nil
 }
 
-func (s *tenantTemplateService) UpdateTemplate(template *TenantTemplate) error {
+func (s *tenantTemplateService) UpdateTemplate(_ *TenantTemplate) error {
 	// TODO: Implement template storage
 	return nil
 }
 
-func (s *tenantTemplateService) DeleteTemplate(templateID uuid.UUID) error {
+func (s *tenantTemplateService) DeleteTemplate(_ uuid.UUID) error {
 	// TODO: Implement template storage
 	return nil
 }
@@ -126,7 +126,7 @@ func (s *tenantTemplateService) ApplyTemplate(tenant *models.Tenant, template *T
 	tenant.MaxUsers = template.MaxUsers
 
 	// Update tenant
-	_, err = s.tenantService.UpdateTenant(nil, tenant.ID, &models.TenantUpdate{})
+	_, err = s.tenantService.UpdateTenant(tenant.ID, &models.TenantUpdate{})
 	return err
 }
 

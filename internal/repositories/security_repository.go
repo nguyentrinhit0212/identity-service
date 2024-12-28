@@ -21,7 +21,7 @@ type SecurityRepository interface {
 	GetAuditLogEntry(tenantID uuid.UUID, logID uuid.UUID) (*models.AuditLog, error)
 	GetSecurityPolicies(tenantID uuid.UUID) (*models.SecurityPolicies, error)
 	UpdateSecurityPolicies(tenantID uuid.UUID, policies *models.SecurityPolicies) error
-	GetSecurityMetrics(tenantID uuid.UUID, timeRange string) (*models.SecurityMetrics, error)
+	GetSecurityMetrics(tenantID uuid.UUID) (*models.SecurityMetrics, error)
 	GetSecurityAlerts(tenantID uuid.UUID, status string) ([]*models.SecurityAlert, error)
 	UpdateSecurityAlert(tenantID uuid.UUID, alertID uuid.UUID, status string) error
 }
@@ -113,7 +113,7 @@ func (r *securityRepository) UpdateSecurityPolicies(tenantID uuid.UUID, policies
 	return r.db.Save(policies).Error
 }
 
-func (r *securityRepository) GetSecurityMetrics(tenantID uuid.UUID, timeRange string) (*models.SecurityMetrics, error) {
+func (r *securityRepository) GetSecurityMetrics(tenantID uuid.UUID) (*models.SecurityMetrics, error) {
 	var metrics models.SecurityMetrics
 	err := r.db.First(&metrics, "tenant_id = ?", tenantID).Error
 	return &metrics, err

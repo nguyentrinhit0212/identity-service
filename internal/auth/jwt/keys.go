@@ -187,8 +187,16 @@ func ImportPublicKeyPEM(pemData []byte) (*rsa.PublicKey, error) {
 
 // generateKeyID generates a unique identifier for a key pair
 func generateKeyID() string {
-	b := make([]byte, 16)
-	rand.Read(b)
+	var (
+		b   = make([]byte, 16)
+		n   int
+		err error
+	)
+	n, err = rand.Read(b)
+	if err != nil || n != 16 {
+		// Fallback to timestamp-based ID if random generation fails
+		return base64.RawURLEncoding.EncodeToString([]byte(time.Now().String()))
+	}
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
@@ -216,19 +224,22 @@ func (m *KeyManager) SignToken(claims jwt.Claims) (string, error) {
 
 // VerifyToken verifies a token and unmarshals its claims
 func (m *KeyManager) VerifyToken(tokenString string, claims jwt.Claims) error {
+	var err error
 	parser := jwt.Parser{
 		ValidMethods: []string{jwt.SigningMethodRS256.Name},
 	}
 
 	// First parse without validation to get the key ID
-	token, _ := parser.Parse(tokenString, nil)
-	if token == nil {
+	var token *jwt.Token
+	token, err = parser.Parse(tokenString, nil)
+	if err != nil {
 		return ErrInvalidKey
 	}
 
 	// Get key ID from token header
-	keyID, ok := token.Header["kid"].(string)
-	if !ok {
+	var ok bool
+	var keyID string
+	if keyID, ok = token.Header["kid"].(string); !ok {
 		return ErrInvalidKey
 	}
 
@@ -239,8 +250,9 @@ func (m *KeyManager) VerifyToken(tokenString string, claims jwt.Claims) error {
 	}
 
 	// Parse and validate token with the correct public key
-	_, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+	_, err = jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		var isRSA bool
+		if _, isRSA = token.Method.(*jwt.SigningMethodRSA); !isRSA {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return keyPair.PublicKey, nil

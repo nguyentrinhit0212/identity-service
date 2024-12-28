@@ -7,27 +7,26 @@ import (
 	"identity-service/internal/repositories"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // UserService handles user-related business logic
 type UserService interface {
-	ListUsers(ctx *gin.Context) ([]*models.User, error)
-	CreateUser(ctx *gin.Context, user *models.User) error
-	GetUser(ctx *gin.Context, id uuid.UUID) (*models.User, error)
-	GetUserByEmail(ctx *gin.Context, email string) (*models.User, error)
-	UpdateUser(ctx *gin.Context, id uuid.UUID, update *models.UserUpdate) error
-	DeleteUser(ctx *gin.Context, id uuid.UUID) error
-	GetUserProfile(ctx *gin.Context, id uuid.UUID) (*models.UserProfile, error)
-	UpdateUserProfile(ctx *gin.Context, id uuid.UUID, profile *models.UserProfile) error
-	GetUserTenants(ctx *gin.Context, id uuid.UUID) ([]*models.Tenant, error)
+	ListUsers() ([]*models.User, error)
+	CreateUser(cuser *models.User) error
+	GetUser(id uuid.UUID) (*models.User, error)
+	GetUserByEmail(email string) (*models.User, error)
+	UpdateUser(id uuid.UUID, update *models.UserUpdate) error
+	DeleteUser(id uuid.UUID) error
+	GetUserProfile(id uuid.UUID) (*models.UserProfile, error)
+	UpdateUserProfile(id uuid.UUID, profile *models.UserProfile) error
+	GetUserTenants(id uuid.UUID) ([]*models.Tenant, error)
 	AddUserToTenant(userID uuid.UUID, tenantID uuid.UUID, roles []string) error
 	RemoveUserFromTenant(userID uuid.UUID, tenantID uuid.UUID) error
 	UpdateUserRole(userID uuid.UUID, tenantID uuid.UUID, role string) error
 	CreateOrUpdateUser(oauthUser *models.OAuthUser) (*models.User, error)
-	UpdatePassword(ctx *gin.Context, userID uuid.UUID, currentPassword, newPassword string) error
+	UpdatePassword(userID uuid.UUID, currentPassword, newPassword string) error
 	VerifyPassword(userID uuid.UUID, password string) error
 }
 
@@ -43,24 +42,24 @@ func NewUserService(userRepo repositories.UserRepository, tenantRepo repositorie
 	}
 }
 
-func (s *userService) ListUsers(ctx *gin.Context) ([]*models.User, error) {
+func (s *userService) ListUsers() ([]*models.User, error) {
 	users, _, err := s.userRepo.ListUsers(0, 0, "", nil)
 	return users, err
 }
 
-func (s *userService) CreateUser(ctx *gin.Context, user *models.User) error {
+func (s *userService) CreateUser(user *models.User) error {
 	return s.userRepo.CreateUser(user)
 }
 
-func (s *userService) GetUser(ctx *gin.Context, id uuid.UUID) (*models.User, error) {
+func (s *userService) GetUser(id uuid.UUID) (*models.User, error) {
 	return s.userRepo.GetUserByID(id)
 }
 
-func (s *userService) GetUserByEmail(ctx *gin.Context, email string) (*models.User, error) {
+func (s *userService) GetUserByEmail(email string) (*models.User, error) {
 	return s.userRepo.GetUserByEmail(email)
 }
 
-func (s *userService) UpdateUser(ctx *gin.Context, id uuid.UUID, update *models.UserUpdate) error {
+func (s *userService) UpdateUser(id uuid.UUID, update *models.UserUpdate) error {
 	user, err := s.userRepo.GetUserByID(id)
 	if err != nil {
 		return err
@@ -86,19 +85,19 @@ func (s *userService) UpdateUser(ctx *gin.Context, id uuid.UUID, update *models.
 	return s.userRepo.UpdateUser(user)
 }
 
-func (s *userService) DeleteUser(ctx *gin.Context, id uuid.UUID) error {
+func (s *userService) DeleteUser(id uuid.UUID) error {
 	return s.userRepo.DeleteUser(id)
 }
 
-func (s *userService) GetUserProfile(ctx *gin.Context, id uuid.UUID) (*models.UserProfile, error) {
+func (s *userService) GetUserProfile(id uuid.UUID) (*models.UserProfile, error) {
 	return s.userRepo.GetUserProfile(id)
 }
 
-func (s *userService) UpdateUserProfile(ctx *gin.Context, id uuid.UUID, profile *models.UserProfile) error {
+func (s *userService) UpdateUserProfile(id uuid.UUID, profile *models.UserProfile) error {
 	return s.userRepo.UpdateUserProfile(id, profile)
 }
 
-func (s *userService) GetUserTenants(ctx *gin.Context, id uuid.UUID) ([]*models.Tenant, error) {
+func (s *userService) GetUserTenants(id uuid.UUID) ([]*models.Tenant, error) {
 	return s.userRepo.GetUserTenants(id)
 }
 
@@ -114,7 +113,7 @@ func (s *userService) UpdateUserRole(userID uuid.UUID, tenantID uuid.UUID, role 
 	return s.userRepo.UpdateUserRole(userID, tenantID, role)
 }
 
-func (s *userService) UpdatePassword(ctx *gin.Context, userID uuid.UUID, currentPassword, newPassword string) error {
+func (s *userService) UpdatePassword(userID uuid.UUID, currentPassword, newPassword string) error {
 	// Get user credentials
 	cred, err := s.userRepo.GetUserCredentials(userID)
 	if err != nil {

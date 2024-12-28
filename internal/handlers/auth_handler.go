@@ -100,7 +100,7 @@ func (h *AuthHandler) ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	if err := h.authService.SendPasswordResetEmail(c, req.Email); err != nil {
+	if err := h.authService.SendPasswordResetEmail(req.Email); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -118,7 +118,7 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	if err := h.authService.ResetPassword(c, req.Token, req.NewPassword); err != nil {
+	if err := h.authService.ResetPassword(req.Token, req.NewPassword); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -135,7 +135,7 @@ func (h *AuthHandler) VerifyEmail(c *gin.Context) {
 		return
 	}
 
-	if err := h.authService.VerifyEmail(c, req.Token); err != nil {
+	if err := h.authService.VerifyEmail(req.Token); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

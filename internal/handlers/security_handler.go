@@ -26,7 +26,7 @@ func NewSecurityHandler(securityService services.SecurityService) *SecurityHandl
 // ListWhitelistedIPs returns a paginated list of whitelisted IPs
 func (h *SecurityHandler) ListWhitelistedIPs(c *gin.Context) {
 	tenantID := h.getTenantID(c)
-	ips, err := h.securityService.ListWhitelistedIPs(c, tenantID)
+	ips, err := h.securityService.ListWhitelistedIPs(tenantID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -46,7 +46,7 @@ func (h *SecurityHandler) AddWhitelistedIP(c *gin.Context) {
 		return
 	}
 
-	err := h.securityService.AddWhitelistedIP(c, tenantID, ip)
+	err := h.securityService.AddWhitelistedIP(tenantID, ip)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -64,7 +64,7 @@ func (h *SecurityHandler) RemoveWhitelistedIP(c *gin.Context) {
 		return
 	}
 
-	if err := h.securityService.RemoveWhitelistedIP(c, tenantID, ip); err != nil {
+	if err := h.securityService.RemoveWhitelistedIP(tenantID, ip); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -75,7 +75,7 @@ func (h *SecurityHandler) RemoveWhitelistedIP(c *gin.Context) {
 // ListAPIKeys returns a list of API keys
 func (h *SecurityHandler) ListAPIKeys(c *gin.Context) {
 	tenantID := h.getTenantID(c)
-	keys, err := h.securityService.ListAPIKeys(c, tenantID)
+	keys, err := h.securityService.ListAPIKeys(tenantID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -98,7 +98,7 @@ func (h *SecurityHandler) CreateAPIKey(c *gin.Context) {
 		expiresAt = &t
 	}
 
-	key, err := h.securityService.CreateAPIKey(c, tenantID, name, expiresAt)
+	key, err := h.securityService.CreateAPIKey(tenantID, name, expiresAt)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -116,7 +116,7 @@ func (h *SecurityHandler) RevokeAPIKey(c *gin.Context) {
 		return
 	}
 
-	if err := h.securityService.RevokeAPIKey(c, tenantID, keyID); err != nil {
+	if err := h.securityService.RevokeAPIKey(tenantID, keyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -127,11 +127,19 @@ func (h *SecurityHandler) RevokeAPIKey(c *gin.Context) {
 // GetSecurityAuditLogs returns security audit logs
 func (h *SecurityHandler) GetSecurityAuditLogs(c *gin.Context) {
 	tenantID := h.getTenantID(c)
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	page, err := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page"})
+		return
+	}
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit"})
+		return
+	}
 	filter := c.QueryMap("filter")
 
-	logs, total, err := h.securityService.GetSecurityAuditLogs(c, tenantID, page, limit, filter)
+	logs, total, err := h.securityService.GetSecurityAuditLogs(tenantID, page, limit, filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -148,7 +156,7 @@ func (h *SecurityHandler) GetSecurityAuditLogs(c *gin.Context) {
 // GetSecurityPolicies returns security policies
 func (h *SecurityHandler) GetSecurityPolicies(c *gin.Context) {
 	tenantID := h.getTenantID(c)
-	policies, err := h.securityService.GetSecurityPolicies(c, tenantID)
+	policies, err := h.securityService.GetSecurityPolicies(tenantID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -166,7 +174,7 @@ func (h *SecurityHandler) UpdateSecurityPolicies(c *gin.Context) {
 		return
 	}
 
-	err := h.securityService.UpdateSecurityPolicies(c, tenantID, &policies)
+	err := h.securityService.UpdateSecurityPolicies(tenantID, &policies)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -178,8 +186,7 @@ func (h *SecurityHandler) UpdateSecurityPolicies(c *gin.Context) {
 // GetSecurityMetrics returns security metrics
 func (h *SecurityHandler) GetSecurityMetrics(c *gin.Context) {
 	tenantID := h.getTenantID(c)
-	timeRange := c.DefaultQuery("timeRange", "24h")
-	metrics, err := h.securityService.GetSecurityMetrics(c, tenantID, timeRange)
+	metrics, err := h.securityService.GetSecurityMetrics(tenantID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -192,7 +199,7 @@ func (h *SecurityHandler) GetSecurityMetrics(c *gin.Context) {
 func (h *SecurityHandler) GetSecurityAlerts(c *gin.Context) {
 	tenantID := h.getTenantID(c)
 	status := c.DefaultQuery("status", "")
-	alerts, err := h.securityService.GetSecurityAlerts(c, tenantID, status)
+	alerts, err := h.securityService.GetSecurityAlerts(tenantID, status)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -216,7 +223,7 @@ func (h *SecurityHandler) UpdateSecurityAlert(c *gin.Context) {
 		return
 	}
 
-	err = h.securityService.UpdateSecurityAlert(c, tenantID, alertID, status)
+	err = h.securityService.UpdateSecurityAlert(tenantID, alertID, status)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -238,7 +245,7 @@ func (h *SecurityHandler) GetAPIKey(c *gin.Context) {
 		return
 	}
 
-	apiKey, err := h.securityService.GetAPIKey(c, tenantID, keyID)
+	apiKey, err := h.securityService.GetAPIKey(tenantID, keyID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "API key not found"})
 		return
@@ -261,7 +268,7 @@ func (h *SecurityHandler) UpdateAPIKey(c *gin.Context) {
 		return
 	}
 
-	apiKey, err := h.securityService.UpdateAPIKey(c, tenantID, keyID, name)
+	apiKey, err := h.securityService.UpdateAPIKey(tenantID, keyID, name)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -278,7 +285,7 @@ func (h *SecurityHandler) DeleteAPIKey(c *gin.Context) {
 		return
 	}
 
-	if err := h.securityService.RevokeAPIKey(c, tenantID, keyID); err != nil {
+	if err := h.securityService.RevokeAPIKey(tenantID, keyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -300,7 +307,7 @@ func (h *SecurityHandler) GetAuditLogEntry(c *gin.Context) {
 		return
 	}
 
-	log, err := h.securityService.GetAuditLogEntry(c, tenantID, logID)
+	log, err := h.securityService.GetAuditLogEntry(tenantID, logID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Audit log entry not found"})
 		return
@@ -323,7 +330,7 @@ func (h *SecurityHandler) TestSecurityPolicy(c *gin.Context) {
 		return
 	}
 
-	result, err := h.securityService.TestSecurityPolicy(c, tenantID, &policy)
+	result, err := h.securityService.TestSecurityPolicy(tenantID, &policy)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

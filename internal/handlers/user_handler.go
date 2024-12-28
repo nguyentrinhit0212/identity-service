@@ -23,7 +23,7 @@ func NewUserHandler(userService services.UserService) *UserHandler {
 
 // ListUsers returns a list of users
 func (h *UserHandler) ListUsers(c *gin.Context) {
-	users, err := h.userService.ListUsers(c)
+	users, err := h.userService.ListUsers()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -40,7 +40,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.userService.CreateUser(c, &user); err != nil {
+	if err := h.userService.CreateUser(&user); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -56,7 +56,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.GetUser(c, userID)
+	user, err := h.userService.GetUser(userID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -79,7 +79,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.userService.UpdateUser(c, userID, &updates); err != nil {
+	if err := h.userService.UpdateUser(userID, &updates); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -95,7 +95,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.userService.DeleteUser(c, userID); err != nil {
+	if err := h.userService.DeleteUser(userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -111,7 +111,7 @@ func (h *UserHandler) GetUserProfile(c *gin.Context) {
 		return
 	}
 
-	profile, err := h.userService.GetUserProfile(c, userID)
+	profile, err := h.userService.GetUserProfile(userID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -134,7 +134,7 @@ func (h *UserHandler) UpdateUserProfile(c *gin.Context) {
 		return
 	}
 
-	if err := h.userService.UpdateUserProfile(c, userID, &profile); err != nil {
+	if err := h.userService.UpdateUserProfile(userID, &profile); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -150,7 +150,7 @@ func (h *UserHandler) GetUserTenants(c *gin.Context) {
 		return
 	}
 
-	tenants, err := h.userService.GetUserTenants(c, userID)
+	tenants, err := h.userService.GetUserTenants(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -244,7 +244,7 @@ func (h *UserHandler) ListUserTenants(c *gin.Context) {
 		return
 	}
 
-	tenants, err := h.userService.GetUserTenants(c, userID)
+	tenants, err := h.userService.GetUserTenants(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -256,7 +256,7 @@ func (h *UserHandler) ListUserTenants(c *gin.Context) {
 // GetProfile returns the current user's profile
 func (h *UserHandler) GetProfile(c *gin.Context) {
 	userID := uuid.MustParse(c.GetString("userID"))
-	profile, err := h.userService.GetUserProfile(c, userID)
+	profile, err := h.userService.GetUserProfile(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -273,7 +273,7 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	if err := h.userService.UpdateUserProfile(c, userID, &profile); err != nil {
+	if err := h.userService.UpdateUserProfile(userID, &profile); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -291,7 +291,7 @@ func (h *UserHandler) UpdatePassword(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.userService.UpdatePassword(c, userID, req.CurrentPassword, req.NewPassword); err != nil {
+	if err := h.userService.UpdatePassword(userID, req.CurrentPassword, req.NewPassword); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
