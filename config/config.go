@@ -23,7 +23,7 @@ func LoadOAuthConfig() {
 	// 1. Load environment variables from .env
 	err := godotenv.Load(".env")
 	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
+		log.Println("No .env file found, relying on system environment variables")
 	}
 
 	// 2. Get the base64 encoded string from the environment
