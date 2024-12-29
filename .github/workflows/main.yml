@@ -11,7 +11,6 @@ env:
   AWS_REGION: ap-southeast-1
   EC2_HOST: 13.212.20.216
   GO_VERSION: 1.21
-  SECRETS_MANAGER_SECRET_ID: arn:aws:secretsmanager:ap-southeast-1:504842983203:secret:identity-service/environment-variables-mMoNTq
 
 jobs:
   test:
@@ -100,8 +99,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Fetch secrets from Secrets Manager
+        env:
+          SECRETS_MANAGER_SECRET_ID: identity-service/environment-variables
         run: |
-          aws secretsmanager get-secret-value --secret-id ${{ env.SECRETS_MANAGER_SECRET_ID }} --query SecretString --output text > .env
+          aws secretsmanager get-secret-value \
+            --secret-id ${{ env.SECRETS_MANAGER_SECRET_ID }} \
+            --query SecretString --output text | jq -r 'to_entries | map("\(.key)=\(.value)") | .[]' > .env
 
       - name: Deploy to EC2
         env:
