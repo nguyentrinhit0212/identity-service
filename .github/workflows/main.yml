@@ -124,9 +124,6 @@ jobs:
             # Stop and remove existing container
             docker stop ${{ env.REPOSITORY }} || true
             docker rm ${{ env.REPOSITORY }} || true
-            
-            pwd
-            cat .env
 
             # Run new container
             docker run -d \
