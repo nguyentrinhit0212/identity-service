@@ -19,7 +19,15 @@ check_migration_status() {
 # Function to run database migrations
 run_migrations() {
     log "Starting database migration process..."
-    
+
+    # Load environment variables from .env 
+    if [ -f ".env" ]; then
+        log "Loading environment variables from .env"
+        export $(grep -v '^#' .env | xargs) 
+    else
+        log "WARNING: .env file not found. Using system environment variables."
+    fi
+
     # Check required environment variables
     for var in DB_HOST DB_USER DB_PASSWORD DB_NAME; do
         if [ -z "$(eval echo \$$var)" ]; then
@@ -27,11 +35,11 @@ run_migrations() {
             exit 1
         fi
     done
-    
+
     log "Checking database connection..."
     max_retries=30
     counter=0
-    
+
     while [ $counter -lt $max_retries ]; do
         if pg_isready -h "${DB_HOST}" -U "${DB_USER}"; then
             log "Database connection established successfully"
@@ -49,11 +57,11 @@ run_migrations() {
 
     # Construct database URL
     dbURL="postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}/${DB_NAME}?sslmode=disable"
-    
+
     # Check current migration status
     log "Checking migration status before applying migrations..."
     check_migration_status "$dbURL"
-    
+
     # Run migrations
     log "Applying database migrations..."
     migrate -path db/migrations -database "$dbURL" up
@@ -78,4 +86,4 @@ run_migrations
 
 log "Step 2/2: Starting Application"
 log "=== Identity Service Initialization Complete ==="
-exec ./main 
+exec ./main
