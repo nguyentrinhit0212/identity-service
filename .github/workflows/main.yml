@@ -107,9 +107,10 @@ jobs:
         run: |
           echo "$PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
-          ssh -o StrictHostKeyChecking=no -i private_key.pem ec2-user@${{ env.EC2_HOST }} '
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ec2-user@${{ env.EC2_HOST }} "bash -s" << EOF
             set -e
             
+            # Fetch secrets from Secrets Manager
             aws secretsmanager get-secret-value \
               --secret-id ${{ env.SECRETS_MANAGER_SECRET_ID }} \
               --query SecretString --output text | jq -r 'to_entries[] | "\(.key)=\(.value)"' > .env
@@ -151,4 +152,4 @@ jobs:
             echo "Container failed health check"
             docker logs ${{ env.REPOSITORY }}
             exit 1
-          '
+          EOF
