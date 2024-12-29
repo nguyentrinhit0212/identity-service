@@ -131,7 +131,7 @@ jobs:
             # Run new container
             docker run -d \
               --name ${{ env.REPOSITORY }} \
-              -v $(pwd)/.env:/app/.env \
+              -v `pwd`/.env:/app/.env \
               -p 4000:4000 \
               --health-cmd="curl -f http://localhost:4000/health || exit 1" \
               --health-interval=30s \
