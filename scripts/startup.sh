@@ -40,8 +40,12 @@ run_migrations() {
     max_retries=30
     counter=0
 
+    # Extract host and port from DB_HOST
+    db_host=$(echo "${DB_HOST}" | cut -d ':' -f 1)  # Extract hostname
+    db_port=$(echo "${DB_HOST}" | cut -d ':' -f 2)  # Extract port
+
     while [ $counter -lt $max_retries ]; do
-        if pg_isready -h "${DB_HOST}" -U "${DB_USER}"; then
+        if pg_isready -h "${db_host}" -p "${db_port}" -U "${DB_USER}"; then  # Use extracted host and port
             log "Database connection established successfully"
             break
         fi
@@ -55,8 +59,8 @@ run_migrations() {
         exit 1
     fi
 
-    # Construct database URL
-    dbURL="postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}/${DB_NAME}?sslmode=disable"
+    # Construct database URL (no need to specify port again)
+    dbURL="postgres://${DB_USER}:${DB_PASSWORD}@${db_host}/${DB_NAME}?sslmode=disable"  # Use extracted host
 
     # Check current migration status
     log "Checking migration status before applying migrations..."
