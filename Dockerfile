@@ -43,11 +43,9 @@ COPY scripts/startup.sh .
 RUN chmod +x startup.sh
 
 # Create a non-root user
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN adduser -D appuser && \
+    chown -R appuser:appuser /app
 USER appuser
-
-# Set ownership of the app directory
-RUN chown -R appuser:appgroup /app
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
