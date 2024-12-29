@@ -3,7 +3,9 @@ package db
 import (
 	"fmt"
 	"log"
+	"net"
 	"os"
+	"strings"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -21,15 +23,27 @@ func Connect() error {
 		}
 	}
 
+	// Extract host and port from DB_HOST
+	host, port, err := net.SplitHostPort(os.Getenv("DB_HOST"))
+	if err != nil {
+		if strings.Contains(err.Error(), "missing port in address") {
+			// If port is missing, use the default PostgreSQL port
+			host = os.Getenv("DB_HOST")
+			port = "5432"
+		} else {
+			return fmt.Errorf("invalid DB_HOST format: %w", err)
+		}
+	}
+
 	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("DB_HOST"),
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		host,
+		port,
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASSWORD"),
 		os.Getenv("DB_NAME"),
 	)
 
-	var err error
 	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Printf("Failed to connect to database: %v", err)
