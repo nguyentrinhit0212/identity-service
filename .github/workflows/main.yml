@@ -99,14 +99,9 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Install AWS CLI
-        run: sudo apt-get update && sudo apt-get install -y awscli
-
       - name: Fetch secrets from Secrets Manager
         run: |
-          aws secretsmanager get-secret-value \ 
-          --secret-id ${{ env.SECRETS_MANAGER_SECRET_ID }} \
-          --query SecretString --output text > .env
+          aws secretsmanager get-secret-value --secret-id ${{ env.SECRETS_MANAGER_SECRET_ID }} --query SecretString --output text > .env
 
       - name: Deploy to EC2
         env:
