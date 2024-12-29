@@ -141,7 +141,7 @@ jobs:
             # Wait for container to become healthy
             echo "Waiting for container health check..."
             for i in $(seq 1 30); do
-              if [ "$(docker inspect --format="{{.State.Health.Status}}" ${{ env.REPOSITORY }})" = "healthy" ]; then
+              if [ "$(docker inspect --format='{{.State.Health.Status}}' ${{ env.REPOSITORY }})" = "healthy" ]; then
                 echo "Container is healthy"
                 exit 0
               fi
