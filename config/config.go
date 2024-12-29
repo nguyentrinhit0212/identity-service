@@ -1,9 +1,12 @@
 package config
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"log"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 type OAuthConfig struct {
@@ -17,25 +20,31 @@ type OAuthConfig struct {
 var GoogleOAuth OAuthConfig
 
 func LoadOAuthConfig() {
-	file, err := os.Open("google_oauth.json")
+	// 1. Load environment variables from .env
+	err := godotenv.Load(".env")
 	if err != nil {
-		log.Fatalf("Failed to open OAuth config file: %v", err)
+		log.Fatalf("Error loading .env file: %v", err)
 	}
-	defer file.Close()
 
-	log.Println("OAuth config file opened successfully")
+	// 2. Get the base64 encoded string from the environment
+	encodedString := os.Getenv("GOOGLE_OAUTH")
 
+	// 3. Decode the base64 string
+	decodedBytes, err := base64.StdEncoding.DecodeString(encodedString)
+	if err != nil {
+		log.Fatalf("Error decoding base64 string: %v", err)
+	}
+
+	// 4. Unmarshal the JSON data into a struct with the "web" property
 	var data struct {
 		Web OAuthConfig `json:"web"`
 	}
-
-	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&data); err != nil {
-		log.Fatalf("Failed to decode OAuth config: %v", err)
+	if err := json.Unmarshal(decodedBytes, &data); err != nil {
+		log.Fatalf("Failed to unmarshal OAuth config: %v", err)
 	}
 
+	// 5. Assign the nested "web" data to GoogleOAuth
 	GoogleOAuth = data.Web
-	log.Printf("Google OAuth Config: %+v", GoogleOAuth)
 
 	log.Println("Google OAuth2 configuration loaded successfully!")
 }

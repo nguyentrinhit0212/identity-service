@@ -37,9 +37,6 @@ func NewGoogleProvider() *GoogleProvider {
 	if len(oauthConfig.RedirectURIs) > 0 {
 		redirectURL = oauthConfig.RedirectURIs[0]
 	}
-	log.Printf("Redirect URL: %s", redirectURL)
-	log.Printf("Client ID present: %v", oauthConfig.ClientID != "")
-	log.Printf("Client Secret present: %v", oauthConfig.ClientSecret != "")
 
 	if oauthConfig.ClientID == "" || oauthConfig.ClientSecret == "" {
 		log.Fatal("ClientID or ClientSecret is missing in OAuth config")
