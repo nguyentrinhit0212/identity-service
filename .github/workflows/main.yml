@@ -9,7 +9,7 @@ on:
 env:
   REPOSITORY: identity-service
   AWS_REGION: ap-southeast-1
-  EC2_HOST: 13.212.20.216
+  EC2_HOST: 54.169.16.126
   GO_VERSION: 1.21
 
 jobs:
@@ -98,25 +98,22 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch secrets from Secrets Manager
-        env:
-          SECRETS_MANAGER_SECRET_ID: identity-service/environment-variables
-        run: |
-          aws secretsmanager get-secret-value \
-            --secret-id ${{ env.SECRETS_MANAGER_SECRET_ID }} \
-            --query SecretString --output text | jq -r 'to_entries | map("\(.key)=\(.value)") | .[]' > .env
-
       - name: Deploy to EC2
         env:
           IMAGE_TAG: ${{ github.sha }}
           PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
           REGISTRY: ${{ secrets.ECR_REPOSITORY_URL }}
+          SECRETS_MANAGER_SECRET_ID: identity-service/environment-variables
         run: |
           echo "$PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
           ssh -o StrictHostKeyChecking=no -i private_key.pem ec2-user@${{ env.EC2_HOST }} '
             set -e
             
+            aws secretsmanager get-secret-value \
+              --secret-id ${{ env.SECRETS_MANAGER_SECRET_ID }} \
+              --query SecretString --output text | jq -r 'to_entries | map("\(.key)=\(.value)") | .[]' > .env
+
             # Login to ECR
             aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URL }}
             
